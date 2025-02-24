@@ -4,6 +4,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
+import java.util.Currency
 
 private data class CurrencyRatesResponseDto(val base: String, val rates: CurrencyRatesDto)
 
@@ -23,6 +24,16 @@ class CurrencyRepository {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
     private val service = retrofit.create(CurrencyRatesService::class.java)
+
+    private val currencyCodeMap = getCurrencies().associateBy(Currency::getCurrencyCode)
+
+    fun findCurrency(currency: String): Currency? {
+        return currencyCodeMap[currency]
+    }
+
+    private fun getCurrencies(): Set<Currency> {
+        return Currency.getAvailableCurrencies()
+    }
 
     suspend fun getCurrencyRates(currency: String): CurrencyRates {
         val response = service.fetchCurrencyRates(currency)

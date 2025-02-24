@@ -8,10 +8,15 @@ import kotlinx.coroutines.flow.retryWhen
 import sample.currency.data.CurrencyRepository
 import timber.log.Timber
 import java.io.IOException
+import java.util.Currency
 
 class CurrencyInteractor(
     private val repository: CurrencyRepository,
 ) {
+    fun findCurrency(currency: String): Currency? {
+        return repository.findCurrency(currency)
+    }
+
     fun fetchCurrencyRates(currency: String, repeatDelayInSec: Int = 3): Flow<CurrencyRatesState> = flow {
         while (true) {
             Timber.d("Fetch currency rates for $currency")
