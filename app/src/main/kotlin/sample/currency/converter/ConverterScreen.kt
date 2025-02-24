@@ -14,23 +14,38 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.Card
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
+import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.flow.StateFlow
 import sample.currency.converter.ConverterUtils.formatAmount
+import sample.currency.converter.ConverterUtils.parseAmount
+import sample.currency.converter.ConverterUtils.reformatInputAmount
 import java.util.Currency
 
 @Composable
@@ -40,6 +55,9 @@ fun ConverterScreen(
     val currencyRatesState by viewModel.currencyRatesState.collectAsState()
     val selectedCurrency by viewModel.selectedCurrency.collectAsState()
     val currencyList by viewModel.currencyList.collectAsState()
+
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(lifecycleOwner) {
@@ -52,7 +70,12 @@ fun ConverterScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Selected currency
-        SelectedCurrencyItem(selectedCurrency)
+        SelectedCurrencyItem(
+            amountFlow = viewModel.amount,
+            currency = selectedCurrency,
+            focusRequester = focusRequester,
+            onAmountChanged = viewModel::onAmountChange,
+        )
 
         when (val state = currencyRatesState) {
             is CurrencyRatesState.Loading ->
@@ -67,6 +90,9 @@ fun ConverterScreen(
             // Currency list
             is CurrencyRatesState.Success ->
                 ConvertCurrencyList(currencyList) {
+                    focusRequester.requestFocus()
+                    keyboardController?.show()
+
                     viewModel.onCurrencyClick(it, lifecycleOwner)
                 }
         }
@@ -90,7 +116,10 @@ private fun LoadingState(
 
 @Composable
 private fun SelectedCurrencyItem(
+    amountFlow: StateFlow<Double?>,
     currency: Currency,
+    focusRequester: FocusRequester,
+    onAmountChanged: (Double?) -> Unit,
 ) {
     Card(
         shape = RoundedCornerShape(8.dp),
@@ -109,6 +138,9 @@ private fun SelectedCurrencyItem(
                 description = currency.displayName,
                 descriptionColor = Color.LightGray,
             )
+
+            // Input amount
+            InputAmountField(amountFlow, focusRequester, onAmountChanged)
         }
     }
 }
@@ -131,6 +163,57 @@ private fun ConvertCurrencyList(
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
+}
+
+@Composable
+private fun InputAmountField(
+    amountFlow: StateFlow<Double?>,
+    focusRequester: FocusRequester,
+    onAmountChanged: (Double?) -> Unit
+) {
+    val amount by amountFlow.collectAsState()
+    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+
+    LaunchedEffect(amount) {
+        if (amount != null) {
+            val formattedAmount = formatAmount(amount!!)
+            if (textFieldValue.text != formattedAmount) {
+                textFieldValue = TextFieldValue(
+                    text = formattedAmount,
+                    selection = TextRange(formattedAmount.length)
+                )
+            }
+        }
+    }
+
+    TextField(
+        value = textFieldValue,
+        onValueChange = { value ->
+            val newText = reformatInputAmount(value.text)
+            val selection = TextRange(newText.length)
+            textFieldValue = value.copy(text = newText, selection = selection)
+
+            val newAmount = parseAmount(newText)
+            onAmountChanged(newAmount)
+        },
+        textStyle = TextStyle(
+            fontSize = 18.sp,
+            color = MaterialTheme.colors.onPrimary,
+            textAlign = TextAlign.End
+        ),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        colors = TextFieldDefaults.textFieldColors(
+            backgroundColor = Color.Transparent,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            disabledIndicatorColor = Color.Transparent,
+            cursorColor = MaterialTheme.colors.onPrimary,
+        ),
+        modifier = Modifier
+            .padding(0.dp)
+            .focusRequester(focusRequester)
+    )
 }
 
 @Composable

@@ -23,6 +23,9 @@ class ConverterViewModel(
     private val _currencyRatesState = MutableStateFlow<CurrencyRatesState>(CurrencyRatesState.Loading)
     val currencyRatesState: StateFlow<CurrencyRatesState> = _currencyRatesState
 
+    private var _amount = MutableStateFlow<Double?>(null)
+    val amount: StateFlow<Double?> = _amount
+
     private val defaultCurrency = Currency.getInstance("EUR")
     private var _selectedCurrency = MutableStateFlow(defaultCurrency)
     val selectedCurrency: StateFlow<Currency> = _selectedCurrency
@@ -66,31 +69,40 @@ class ConverterViewModel(
         }
     }
 
+    fun onAmountChange(amount: Double?) {
+        Timber.i("onAmountChange: $amount")
+        _amount.update { amount }
+        updateCurrencyList()
+    }
+
     fun onCurrencyClick(item: ConvertCurrency, lifecycleOwner: LifecycleOwner) {
         Timber.i("onCurrencyClick: $item")
+        //_amount.update { item.amount }
         _selectedCurrency.update { item.currency }
         updateCurrencyList()
         fetchCurrencies(lifecycleOwner)
     }
 
     private fun updateCurrencyList() {
-        val currencyRates = currencyRates
+        val amount = _amount.value
         val selectedCurrency = _selectedCurrency.value
+        val currencyRates = currencyRates
         val baseCurrency = interactor.findCurrency(currencyRates.baseCurrency) ?: return
-        Timber.i("Update currency list (base: $baseCurrency)")
+        Timber.i("updateCurrencyList: $amount, $baseCurrency, $selectedCurrency")
 
         val viewItems = currencyCodes
             .filterNot { it == selectedCurrency.currencyCode }
             .mapNotNull { code ->
-                val currency = interactor.findCurrency(code)
-                    ?: return@mapNotNull null
+                val currency = interactor.findCurrency(code) ?: return@mapNotNull null
                 val currencyRate = currencyRates.values.find { it.currency == code }
 
                 var amountValue: Double? = null
                 var rateValue: Double? = null
-                if (selectedCurrency == baseCurrency && currencyRate != null) {
+                if (selectedCurrency == baseCurrency
+                    && amount != null && currencyRate != null
+                ) {
                     rateValue = currencyRate.value
-                    amountValue = 1.0 * rateValue
+                    amountValue = amount * rateValue
                 }
 
                 ConvertCurrency(currency, baseCurrency, amountValue, rateValue)

@@ -2,8 +2,13 @@ package sample.currency.converter
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
@@ -31,6 +36,8 @@ private fun TopBarImpl() {
             )
         },
         backgroundColor = MaterialTheme.colors.primary,
+        modifier = Modifier
+            .windowInsetsPadding(WindowInsets.statusBars)
     )
 }
 
@@ -43,6 +50,8 @@ private fun ContentImpl(
         modifier = Modifier
             .fillMaxSize()
             .padding(padding)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .imePadding()
     ) {
         ConverterScreen(converterViewModel)
     }
