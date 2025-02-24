@@ -12,6 +12,6 @@ sealed class CurrencyRatesState {
 data class ConvertCurrency(
     val currency: Currency,
     val baseCurrency: Currency,
-    val amount: Double,
-    val rate: Double,
+    val amount: Double?,
+    val rate: Double?,
 )

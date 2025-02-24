@@ -1,5 +1,6 @@
 package sample.currency.converter
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,12 +31,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import sample.currency.converter.ConverterUtils.formatAmount
+import java.util.Currency
 
 @Composable
 fun ConverterScreen(
     viewModel: ConverterViewModel,
 ) {
     val currencyRatesState by viewModel.currencyRatesState.collectAsState()
+    val selectedCurrency by viewModel.selectedCurrency.collectAsState()
     val currencyList by viewModel.currencyList.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -47,6 +50,9 @@ fun ConverterScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         Spacer(modifier = Modifier.height(8.dp))
+
+        // Selected currency
+        SelectedCurrencyItem(selectedCurrency)
 
         when (val state = currencyRatesState) {
             is CurrencyRatesState.Loading ->
@@ -60,7 +66,9 @@ fun ConverterScreen(
 
             // Currency list
             is CurrencyRatesState.Success ->
-                ConvertCurrencyList(currencyList)
+                ConvertCurrencyList(currencyList) {
+                    viewModel.onCurrencyClick(it, lifecycleOwner)
+                }
         }
     }
 }
@@ -81,8 +89,34 @@ private fun LoadingState(
 }
 
 @Composable
+private fun SelectedCurrencyItem(
+    currency: Currency,
+) {
+    Card(
+        shape = RoundedCornerShape(8.dp),
+        backgroundColor = MaterialTheme.colors.primaryVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DetailsItem(
+                label = currency.currencyCode,
+                labelColor = MaterialTheme.colors.onPrimary,
+                description = currency.displayName,
+                descriptionColor = Color.LightGray,
+            )
+        }
+    }
+}
+
+@Composable
 private fun ConvertCurrencyList(
     currencies: List<ConvertCurrency>,
+    onItemClick: (ConvertCurrency) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize()
@@ -91,7 +125,7 @@ private fun ConvertCurrencyList(
             items = currencies,
             key = { item -> item.currency.currencyCode }
         ) { item ->
-            CurrencyItem(item)
+            CurrencyItem(item) { onItemClick(item) }
         }
         item {
             Spacer(modifier = Modifier.height(8.dp))
@@ -102,12 +136,14 @@ private fun ConvertCurrencyList(
 @Composable
 fun LazyItemScope.CurrencyItem(
     item: ConvertCurrency,
+    onItemClick: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(8.dp),
         backgroundColor = MaterialTheme.colors.secondary,
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onItemClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .animateItem()
     ) {
@@ -119,11 +155,13 @@ fun LazyItemScope.CurrencyItem(
                 description = item.currency.displayName,
                 horizontalAlignment = Alignment.Start,
             )
-            DetailsItem(
-                label = formatAmount(item.amount),
-                description = "1 ${item.baseCurrency.currencyCode} = ${formatAmount(item.rate)}",
-                horizontalAlignment = Alignment.End,
-            )
+            if (item.amount != null && item.rate != null) {
+                DetailsItem(
+                    label = formatAmount(item.amount),
+                    description = "1 ${item.baseCurrency.currencyCode} = ${formatAmount(item.rate)}",
+                    horizontalAlignment = Alignment.End,
+                )
+            }
         }
     }
 }

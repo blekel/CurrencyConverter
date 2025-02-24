@@ -2,6 +2,7 @@ package sample.currency.converter
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.retryWhen
@@ -12,13 +13,15 @@ import java.util.Currency
 
 class CurrencyInteractor(
     private val repository: CurrencyRepository,
+    private val selectedCurrency: StateFlow<Currency>,
 ) {
     fun findCurrency(currency: String): Currency? {
         return repository.findCurrency(currency)
     }
 
-    fun fetchCurrencyRates(currency: String, repeatDelayInSec: Int = 3): Flow<CurrencyRatesState> = flow {
+    fun fetchCurrencyRates(repeatDelayInSec: Int = 3): Flow<CurrencyRatesState> = flow {
         while (true) {
+            val currency = selectedCurrency.value.currencyCode
             Timber.d("Fetch currency rates for $currency")
             val rates = repository.getCurrencyRates(currency)
 
