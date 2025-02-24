@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2025, Vitaliy Levonyuk
+ * Licensed under the MIT License.
+ */
 package sample.currency.data
 
 import retrofit2.Retrofit
