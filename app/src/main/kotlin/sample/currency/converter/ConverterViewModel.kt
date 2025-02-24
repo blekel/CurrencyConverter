@@ -1,33 +1,36 @@
 package sample.currency.converter
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import sample.currency.data.CurrencyRates
 import sample.currency.data.CurrencyRepository
-import timber.log.Timber
 
 class ConverterViewModel(
-    private val repository: CurrencyRepository
+    repository: CurrencyRepository
 ) : ViewModel() {
 
-    private val _currencyRates = MutableStateFlow(CurrencyRates("", emptyList()))
-    val currencyRates: StateFlow<CurrencyRates> = _currencyRates
+    private val _currencyRates = MutableStateFlow<CurrencyRatesState>(CurrencyRatesState.Loading)
+    val currencyRates: StateFlow<CurrencyRatesState> = _currencyRates
 
     private val defaultCurrency = "EUR"
+    private val interactor = CurrencyInteractor(repository)
     private var fetchCurrenciesJob: Job? = null
 
-    fun fetchCurrencies() {
+    fun fetchCurrencies(lifecycleOwner: LifecycleOwner) {
         fetchCurrenciesJob?.cancel()
         fetchCurrenciesJob = viewModelScope.launch {
-            Timber.d("fetch currency rates for $defaultCurrency")
-            val response = repository.getCurrencyRates(defaultCurrency)
-            Timber.d("response: $response")
-            _currencyRates.update { response }
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                interactor.fetchCurrencyRates(defaultCurrency).collect { state ->
+                    _currencyRates.update { state }
+                }
+            }
         }
     }
 }
