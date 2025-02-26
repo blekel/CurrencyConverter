@@ -43,6 +43,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -241,6 +242,7 @@ fun LazyItemScope.CurrencyItem(
                 label = item.currency.currencyCode,
                 description = item.currency.displayName,
                 horizontalAlignment = Alignment.Start,
+                modifier = Modifier.weight(1f)
             )
             if (item.amount != null && item.rate != null) {
                 DetailsItem(
@@ -260,10 +262,11 @@ fun DetailsItem(
     labelColor: Color = MaterialTheme.colors.onSecondary,
     descriptionColor: Color = Color.Gray,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
+    modifier: Modifier = Modifier
 ) {
     Column(
         horizontalAlignment = horizontalAlignment,
-        modifier = Modifier.padding(16.dp)
+        modifier = modifier.padding(16.dp)
     ) {
         Text(
             text = label,
@@ -274,6 +277,8 @@ fun DetailsItem(
             text = description,
             color = descriptionColor,
             style = TextStyle(fontSize = 16.sp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 4.dp)
         )
     }
